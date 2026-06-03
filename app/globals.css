@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+:root { color-scheme: light only; --gold:#B8902A; --ink:#141414; }
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; }
+body { color-scheme:light only; background:#fafaf8; color:var(--ink); font-family:'DM Sans',sans-serif; }
+
+.wrap{ max-width:1120px; margin:0 auto; padding:0 20px 90px; }
+.head{ border-bottom:2px solid var(--ink); padding:26px 0 18px; margin-bottom:24px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.title{ font-family:'Outfit',sans-serif; font-weight:800; font-size:26px; letter-spacing:-.02em; margin:0; }
+.title span{ color:var(--gold); }
+.sub{ font-size:13px; color:#6b6b6b; margin-top:4px; }
+.badge{ font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; border:1px solid var(--ink); padding:5px 10px; }
+
+.card{ background:#fff; border:1px solid #e7e5df; padding:20px; margin-bottom:18px; }
+.card h3{ font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:.06em; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+.num{ background:var(--gold); color:#fff; font-family:'DM Mono',monospace; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; }
+
+.row{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
+.fld{ display:flex; flex-direction:column; gap:6px; }
+.lbl{ font-size:12px; font-weight:600; color:#555; }
+select, input[type=file], input[type=password]{ font-family:'DM Sans',sans-serif; font-size:14px; padding:10px 12px; border:1px solid #ccc; background:#fff; color:var(--ink); }
+.btn{ background:var(--ink); color:#fff; border:0; padding:13px 26px; font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; cursor:pointer; letter-spacing:.02em; }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn.gold{ background:var(--gold); }
+.btn.ghost{ background:#fff; color:var(--ink); border:1px solid var(--ink); }
+
+.chip{ font-family:'DM Mono',monospace; font-size:11px; border:1px solid #ddd; padding:5px 9px; background:#faf8f2; }
+.chip b{ color:var(--gold); }
+.prog{ height:6px; background:#eee; margin-top:14px; overflow:hidden; }
+.prog i{ display:block; height:100%; background:var(--gold); transition:width .3s; }
+.stats{ display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 16px; }
+.stat{ padding:10px 16px; border:1px solid #e7e5df; background:#fff; min-width:96px; }
+.stat .n{ font-family:'Outfit',sans-serif; font-weight:800; font-size:24px; line-height:1; }
+.stat .l{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#888; margin-top:4px; }
+
+.res{ display:grid; grid-template-columns:1fr; gap:12px; }
+.item{ display:flex; gap:14px; border:1px solid #e7e5df; background:#fff; padding:12px; align-items:flex-start; }
+.item.rev{ border-color:#e9c98a; box-shadow:inset 3px 0 0 var(--gold); }
+.thumb{ width:120px; height:78px; object-fit:cover; border:1px solid #ddd; flex:0 0 auto; background:#f3f3f3; }
+.fields{ flex:1; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.fname{ font-family:'DM Mono',monospace; font-size:11px; color:#999; }
+.frow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.fk{ font-size:12px; font-weight:600; color:#555; min-width:120px; }
+.frow input{ font-family:'DM Mono',monospace; font-size:14px; padding:6px 9px; border:1px solid #ccc; width:240px; max-width:60vw; }
+.tag{ font-size:11px; font-weight:700; padding:3px 8px; font-family:'DM Mono',monospace; }
+.statustag{ font-family:'Outfit',sans-serif; font-weight:700; font-size:11px; padding:4px 9px; text-transform:uppercase; letter-spacing:.04em; }
+.err{ background:#fdecec; color:#c0392b; padding:12px 16px; font-size:13px; border:1px solid #f0b9b3; margin-bottom:14px; }
+.note{ font-size:12px; color:#777; margin-top:8px; line-height:1.5; }
+
+.login{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+.loginbox{ background:#fff; border:1px solid #e7e5df; padding:34px; width:100%; max-width:380px; }
+.loginbox .title{ font-size:22px; }
