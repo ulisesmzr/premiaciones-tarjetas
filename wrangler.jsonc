@@ -7,5 +7,12 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "premiaciones",
+      "database_id": "62b91497-d64f-4dc6-88e3-2b2ddd4e8a8b"
+    }
+  ]
 }
