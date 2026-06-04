@@ -17,48 +17,52 @@ export async function POST(req: NextRequest) {
 
     const fieldList = fields.map((f) => {
       const parts = [`- "${f.id}" → ${f.label}`];
-      if (f.layout) parts.push(`  Dónde está: ${f.layout}`);
-      if (f.hint) parts.push(`  Formato: ${f.hint}`);
-      if (f.numeric) parts.push(`  TIPO: SOLO dígitos 0-9, NUNCA letras`);
-      if (f.minLen && f.maxLen && f.minLen === f.maxLen) parts.push(`  Exactamente ${f.minLen} caracteres`);
-      else if (f.minLen && f.maxLen) parts.push(`  Entre ${f.minLen} y ${f.maxLen} caracteres`);
+      if (f.layout) parts.push(`  Ubicación: ${f.layout}`);
+      if (f.hint) parts.push(`  Formato esperado: ${f.hint}`);
+      if (f.numeric) parts.push(`  ⚠ NUMÉRICO: escribe SOLO dígitos 0-9, jamás letras`);
+      if (f.minLen && f.maxLen && f.minLen === f.maxLen) parts.push(`  ⚠ Longitud exacta: ${f.minLen} dígitos — si tienes más, hay un dígito duplicado`);
+      else if (f.minLen && f.maxLen) parts.push(`  ⚠ Longitud: entre ${f.minLen} y ${f.maxLen} dígitos`);
       return parts.join("\n");
     }).join("\n\n");
 
     const jsonShape = fields.map((f) => `"${f.id}": "valor o null"`).join(", ");
     const confShape = fields.map((f) => `"${f.id}": "alta|media|baja"`).join(", ");
 
-    const prompt = `Eres un experto extractor de datos de tarjetas de regalo mexicanas (marca: ${tpl.name}) con MÁXIMA precisión. La imagen puede contener UNA o VARIAS tarjetas.
+    const prompt = `Eres un experto extractor de datos de tarjetas de regalo mexicanas. Marca a procesar: ${tpl.name}.
 
-DETECCIÓN OBLIGATORIA: Antes de extraer, cuenta cuántas tarjetas ${tpl.name} hay en la imagen. Si hay 3, el arreglo debe tener 3 elementos. Revisa toda la imagen de borde a borde.
+═══ PASO 1: CUENTA TODAS LAS TARJETAS ═══
+Examina la imagen COMPLETA de esquina a esquina.
+Identifica cada tarjeta ${tpl.name} visible (en fila, en grid, traslapadas, etc.).
+Asígnales un número: tarjeta 1, tarjeta 2, tarjeta 3...
+El arreglo de salida DEBE tener exactamente ese número de elementos.
+⚠ Si hay 5 tarjetas y devuelves 1, eso es un ERROR GRAVE. Devuelve TODAS.
+Si una tarjeta está parcialmente visible o borrosa, inclúyela con confianza "baja".
 
-EXTRAE estos campos de CADA tarjeta:
+═══ PASO 2: EXTRAE LOS CAMPOS DE CADA TARJETA ═══
 
 ${fieldList}
 
-═══ REGLAS CRÍTICAS ═══
+═══ PASO 3: REGLAS DE PRECISIÓN ═══
 
-1. DÍGITOS vs LETRAS (campos numéricos):
-   - NUNCA uses "O" — siempre es el dígito "0"
-   - NUNCA uses "I" ni "l" — siempre es el dígito "1"
-   - NUNCA uses "B" en numéricos — podría ser "8"
-   - NUNCA uses "S" en numéricos — podría ser "5"
+PARA CAMPOS NUMÉRICOS:
+- La letra O y el dígito 0 se parecen — en campos numéricos SIEMPRE es el dígito "0"
+- La letra I, la l minúscula y el 1 se parecen — en campos numéricos SIEMPRE es "1"
+- Lee dígito por dígito de izquierda a derecha
+- Cuenta los dígitos antes de reportar — si hay más de los esperados, relée: hay un dígito duplicado
+- "7017" son 4 dígitos, nunca los escribas como "70017"
 
-2. CONTEO DE DÍGITOS:
-   - Lee cada dígito individualmente de izquierda a derecha
-   - Cuenta ANTES de reportar
-   - NUNCA dupliques un dígito ("7017" son 4 dígitos, no "70017")
-   - Si la longitud no coincide con el rango esperado, revisa de nuevo
+PARA CAMPOS ALFANUMÉRICOS (códigos Spotify, Amazon, Uber, etc.):
+- Lee exactamente lo que está impreso en el código
+- Si un carácter es genuinamente ambiguo entre O y 0, reporta confianza "baja"
 
-3. CONFIANZA BAJA si:
-   - Un dígito es ambiguo
-   - La longitud no coincide
-   - Imagen borrosa o con brillo
+CONFIANZA "baja" si:
+- El dígito/letra es ambiguo
+- La longitud no cuadra con lo esperado
+- Imagen borrosa, con brillo, o el área está tapada
 
-4. MÚLTIPLES TARJETAS:
-   - Devuelve UNA entrada por CADA tarjeta visible
-   - No mezcles datos de tarjetas distintas
-   - Si hay 5 tarjetas, el arreglo tiene 5 elementos
+═══ PASO 4: VERIFICA ANTES DE RESPONDER ═══
+¿El número de entradas en el arreglo coincide con el número de tarjetas que viste?
+Para campos numéricos: ¿cada valor tiene SOLO dígitos? ¿La longitud es correcta?
 
 Devuelve SOLO JSON válido, sin markdown:
 { "tarjetas": [ { "campos": { ${jsonShape} }, "confianza": { ${confShape} } } ] }`;
