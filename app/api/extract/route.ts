@@ -16,23 +16,59 @@ export async function POST(req: NextRequest) {
     const model = process.env.MODEL || "claude-sonnet-4-6";
     const fields = tpl.fields;
 
-    const fieldList = fields.map((f) => `- "${f.id}" → ${f.label}${f.hint ? " (" + f.hint + ")" : ""}`).join("\n");
+    // Construir lista de campos con ubicación espacial
+    const fieldList = fields.map((f) => {
+      const parts = [`- "${f.id}" → ${f.label}`];
+      if (f.layout) parts.push(`  Dónde está: ${f.layout}`);
+      if (f.hint) parts.push(`  Formato: ${f.hint}`);
+      if (f.numeric) parts.push(`  TIPO: SOLO dígitos 0-9, NUNCA letras`);
+      if (f.minLen && f.maxLen && f.minLen === f.maxLen) parts.push(`  Exactamente ${f.minLen} caracteres`);
+      else if (f.minLen && f.maxLen) parts.push(`  Entre ${f.minLen} y ${f.maxLen} caracteres`);
+      return parts.join("\n");
+    }).join("\n\n");
+
     const jsonShape = fields.map((f) => `"${f.id}": "valor o null"`).join(", ");
     const confShape = fields.map((f) => `"${f.id}": "alta|media|baja"`).join(", ");
 
-    const prompt = `Eres un extractor de datos de tarjetas de regalo mexicanas (marca: ${tpl.name}). La imagen puede contener UNA o VARIAS tarjetas. Extrae estos campos de CADA tarjeta visible:
+    const prompt = `Eres un experto extractor de datos de tarjetas de regalo mexicanas (marca: ${tpl.name}) con MÁXIMA precisión. La imagen puede contener UNA o VARIAS tarjetas.
+
+EXTRAE estos campos de CADA tarjeta visible:
+
 ${fieldList}
 
-Reglas:
-- Respeta mayúsculas, minúsculas, guiones y caracteres tal cual aparecen.
-- NO inventes. Si un carácter es ilegible, borroso o ambiguo, baja la confianza de ese campo a "baja".
-- En números, quita los espacios internos.
-- En códigos alfanuméricos conserva los guiones.
-- Si un campo no aparece, pon null y confianza "baja".
+═══ REGLAS CRÍTICAS DE PRECISIÓN ═══
 
-Devuelve SOLO un JSON válido, sin markdown ni texto adicional:
-{ "tarjetas": [ { "campos": { ${jsonShape} }, "confianza": { ${confShape} } } ] }
-Una entrada del arreglo por CADA tarjeta visible. Si solo hay una tarjeta, el arreglo tiene un elemento.`;
+1. DÍGITOS vs LETRAS (campo numérico):
+   - NUNCA uses la letra "O" en campos numéricos — siempre es el DÍGITO CERO "0"
+   - NUNCA uses "I" o "l" en campos numéricos — siempre es el DÍGITO UNO "1"
+   - NUNCA uses "B" en campos numéricos — podría ser "8"
+   - NUNCA uses "S" en campos numéricos — podría ser "5"
+   - En campos numéricos, cualquier símbolo redondo = "0", cualquier símbolo vertical = "1"
+
+2. CONTEO DE DÍGITOS:
+   - Lee cada dígito individualmente de izquierda a derecha
+   - Cuenta los dígitos ANTES de reportar
+   - Si la longitud no coincide con el rango esperado, revisa la imagen de nuevo
+   - NUNCA dupliques un dígito — si ves "7017", son 4 dígitos, no "70017"
+
+3. UBICACIÓN ESPACIAL:
+   - Lee EXACTAMENTE el campo indicado en su ubicación
+   - No confundas el número de tarjeta con el número de serie
+   - No confundas el CVV/monto holográfico con el número vertical lateral
+   - El código de barras numérico NO es el código de canje
+
+4. CONFIANZA BAJA si:
+   - Un dígito es ambiguo (podría ser dos caracteres distintos)
+   - La longitud no coincide con la esperada
+   - La imagen está borrosa, con brillo o el área está tapada
+   - Hay más o menos dígitos de los esperados
+
+5. MÚLTIPLES TARJETAS:
+   - Si hay más de una tarjeta, devuelve una entrada por cada una
+   - No mezcles datos de tarjetas distintas
+
+Devuelve SOLO JSON válido, sin markdown:
+{ "tarjetas": [ { "campos": { ${jsonShape} }, "confianza": { ${confShape} } } ] }`;
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -46,7 +82,11 @@ Una entrada del arreglo por CADA tarjeta visible. Si solo hay una tarjeta, el ar
         ]}],
       }),
     });
-    if (!r.ok) { const t = await r.text(); return NextResponse.json({ error: "API visión: " + t.slice(0, 200) }, { status: 502 }); }
+
+    if (!r.ok) {
+      const t = await r.text();
+      return NextResponse.json({ error: "API visión: " + t.slice(0, 200) }, { status: 502 });
+    }
     const data = await r.json();
     const text = (data.content || []).filter((i: any) => i.type === "text").map((i: any) => i.text).join("").replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(text);
@@ -59,7 +99,20 @@ Una entrada del arreglo por CADA tarjeta visible. Si solo hay una tarjeta, el ar
     const out: any[] = [];
     for (const item of list) {
       const campos = item.campos || {};
-      const conf = item.confianza || {};
+      const conf: Record<string, string> = item.confianza || {};
+
+      // Validación de longitud para campos numéricos
+      for (const f of fields) {
+        if (f.numeric && (f.minLen || f.maxLen)) {
+          const v = norm(campos[f.id], true);
+          const tooShort = f.minLen && v.length < f.minLen;
+          const tooLong = f.maxLen && v.length > f.maxLen;
+          if (tooShort || tooLong) {
+            conf[f.id] = "baja"; // fuerza revisión si longitud incorrecta
+          }
+        }
+      }
+
       const kv = norm(campos[kf.id], kf.numeric);
       let dupInDb = false;
       if (kv) {
